@@ -38,7 +38,7 @@ public class JdbcRunner {
 //        String sql5 = """
 //                SELECT * FROM ticket;
 //                """;
-//        try (Connection connection = ConnectionManager.open();
+//        try (Connection connection = ConnectionManager.get();
 //             Statement statement = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,ResultSet.CONCUR_UPDATABLE)) {
 //
 //
@@ -70,11 +70,15 @@ public class JdbcRunner {
 //        System.out.println(ticketsByFlightId);
 //        List<Long> flightsBetween = getFlightsBetween(LocalDate.of(2020, 6, 1).atStartOfDay(), LocalDateTime.now());
 //        System.out.println(flightsBetween);
-        checkMetaData();
+        try {
+            checkMetaData();
+        } finally {
+            ConnectionManager.closePool();
+        }
     }
 
     private static void checkMetaData() throws SQLException {
-        try (Connection connection = ConnectionManager.open();) {
+        try (Connection connection = ConnectionManager.get();) {
             DatabaseMetaData metaData = connection.getMetaData();
             ResultSet catalogs = metaData.getCatalogs();
             while (catalogs.next()) {
@@ -100,7 +104,7 @@ public class JdbcRunner {
                 WHERE departure_date BETWEEN ? AND ?;
                 """;
         List<Long> list = new ArrayList<>();
-        try (Connection connection = ConnectionManager.open(); PreparedStatement preparedStatement = connection.prepareStatement(sql);) {
+        try (Connection connection = ConnectionManager.get(); PreparedStatement preparedStatement = connection.prepareStatement(sql);) {
             preparedStatement.setFetchSize(50);
             preparedStatement.setQueryTimeout(10);
             preparedStatement.setMaxRows(100);
@@ -124,7 +128,8 @@ public class JdbcRunner {
                 WHERE flight_id = ?
                 """;
         List<Long> list = new ArrayList<>();
-        try (Connection connection = ConnectionManager.open(); PreparedStatement preparedStatement = connection.prepareStatement(sql);) {
+        try (Connection connection = ConnectionManager.get();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql);) {
             preparedStatement.setLong(1, flightId);
 
             ResultSet resultSet = preparedStatement.executeQuery();
